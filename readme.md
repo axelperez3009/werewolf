@@ -25,3 +25,19 @@ This implementation includes the following features:
 1. Clone this repository:
    ```bash
    git clone https://github.com/your-username/werewolf-game.git
+
+2. Navigate to the project directory:
+   ```bash
+   cd werewolf-game
+
+3. Compile the game using your C++ compiler:
+   ```bash
+   g++ -o werewolf main.cpp
+
+### Usage
+
+1. Run the compiled executable to start the game:
+   ```bash
+   ./werewolf
+
+2. Follow the on-screen instructions to play the game.:
