@@ -15,8 +15,8 @@ Sigue estos pasos para configurar y ejecutar el proyecto:
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/tuusuario/TheWereWolfGame.git
-cd TheWereWolfGame
+git clone https://github.com/axelperez3009/werewolf.git
+cd werewolf
 ```
 
 ### 2. Crear y activar un entorno virtual
