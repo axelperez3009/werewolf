@@ -14,32 +14,32 @@ Sigue estos pasos para configurar y ejecutar el proyecto:
 
 ### 1. Clonar el repositorio
 
-\`\`\`bash
+```bash
 git clone https://github.com/tuusuario/TheWereWolfGame.git
 cd TheWereWolfGame
-\`\`\`
+```
 
 ### 2. Crear y activar un entorno virtual
 
 En macOS y Linux:
 
-\`\`\`bash
+```bash
 python3 -m venv myenv
 source myenv/bin/activate
-\`\`\`
+```
 
 En Windows:
 
-\`\`\`bash
+```bash
 python -m venv myenv
 myenv\Scripts\activate
-\`\`\`
+```
 
 ### 3. Instalar las dependencias
 
-\`\`\`bash
+```bash
 pip install -r requirements.txt
-\`\`\`
+```
 
 ## Uso
 
@@ -47,21 +47,21 @@ pip install -r requirements.txt
 
 En una terminal, ejecuta:
 
-\`\`\`bash
+```bash
 python server.py
-\`\`\`
+```
 
 ### 2. Ejecutar el cliente
 
 En otra terminal (puedes abrir varias para simular múltiples clientes), ejecuta:
 
-\`\`\`bash
+```bash
 python client.py
-\`\`\`
+```
 
 ## Estructura del Proyecto
 
-\`\`\`plaintext
+```plaintext
 TheWereWolfGame/
 ├── assets/
 │   └── imagenfondo.webp
@@ -69,7 +69,7 @@ TheWereWolfGame/
 ├── server.py
 ├── requirements.txt
 └── README.md
-\`\`\`
+```
 
 - `assets/imagenfondo.webp`: La imagen de fondo utilizada por el cliente.
 - `client.py`: Código del cliente.
@@ -78,15 +78,13 @@ TheWereWolfGame/
 - `README.md`: Este archivo de documentación.
 
 
-## Licencia
 
-Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para obtener más detalles.
 
 ## .gitignore
 
 Asegúrate de tener un archivo `.gitignore` para excluir el entorno virtual y otros archivos innecesarios del repositorio. Aquí tienes un ejemplo:
 
-\`\`\`plaintext
+
 # Ignorar entornos virtuales
 venv/
 myenv/
@@ -100,4 +98,4 @@ __pycache__/
 
 # Ignorar archivos de logs
 *.log
-\`\`\`
+
