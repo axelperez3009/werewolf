@@ -1,7 +1,7 @@
 
 # The WereWolf Game
 
-Este es un proyecto simple de juego cliente-servidor en Python que permite a múltiples clientes conectarse a un servidor y ver cuándo otros clientes se unen o abandonan el servidor.
+Este es un proyecto simple de juego cliente-servidor en Python que permite a múltiples clientes conectarse a un servidor y ver cuándo otros clientes se unen o abandonan el servidor. Cada jugador (cliente) tiene un cronometro de 60 segundos en bucle, durante este tiempo el jugador puede votar por otro jugador colocando el usuario de este en el input, al terminar los 60 segundos, el jugador con más votos será expulsado por el servidor.
 
 ## Requisitos
 
