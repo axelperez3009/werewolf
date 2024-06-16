@@ -32,7 +32,7 @@ votes = {}
 time_left = 60  # Tiempo inicial en segundos
 
 def receive_messages():
-    global role, votes, time_left
+    global role, votes, time_left, game_over
     while True:
         try:
             message = client.recv(1024).decode('utf-8')
@@ -52,12 +52,79 @@ def receive_messages():
                 messages.append("Inicio de la votación.\n")
             elif message == "FIN_VOTACION":
                 messages.append("Fin de la votación.\n")
+            elif message.startswith("GAME_OVER"):
+                winner = message.split(' ')[1]
+                end_game_view(winner)
+                break
             else:
                 messages.append(message + '\n')
         except Exception as e:
             print(f"¡Ocurrió un error! {e}")
             client.close()
             break
+
+
+def end_game_view(winner):
+    pygame.init()
+    
+    # Configuración de la pantalla
+    screen_width, screen_height = 1000, 600
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    pygame.display.set_caption("Fin del Juego")
+    
+    # Colores
+    DARK_GRAY = (50, 50, 50)
+    LIGHT_GRAY = (200, 200, 200)
+    WHITE = (255, 255, 255)
+    BLACK = (0, 0, 0)
+    FONT_COLOR = WHITE
+    
+    # Fuente para el texto
+    font_big = pygame.font.Font(None, 72)
+    font_small = pygame.font.Font(None, 48)
+    font_button = pygame.font.Font(None, 32)
+    
+    # Mensajes de texto
+    end_game_message = "Fin del Juego"
+    winner_message = f"Ganaron los {winner}"
+    button_text = "Regresar"
+    
+    #Mostrar texto
+    def show_text(message, y, font, color):
+        text = font.render(message, True, color)
+        shadow = font.render(message, True, BLACK)
+        text_rect = text.get_rect(center=(screen_width / 2 + 2, y + 2))
+        shadow_rect = text.get_rect(center=(screen_width / 2, y))
+        screen.blit(shadow, shadow_rect)
+        screen.blit(text, text_rect)
+    
+    #Dibujar boton
+    def draw_button(text, font, color, button_color, x, y, width, height):
+        button_rect = pygame.Rect(x, y, width, height)
+        pygame.draw.rect(screen, button_color, button_rect)
+        text_surf = font.render(text, True, color)
+        text_rect = text_surf.get_rect(center=(x + width / 2, y + height / 2))
+        screen.blit(text_surf, text_rect)
+        return button_rect
+    
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_button.collidepoint(event.pos):
+                    running = False
+                    main()  #Regresar a inicio
+        
+        screen.fill(DARK_GRAY)
+        show_text(end_game_message, screen_height / 3, font_big, FONT_COLOR)
+        show_text(winner_message, screen_height / 2, font_small, FONT_COLOR)
+        back_button = draw_button(button_text, font_button, BLACK, LIGHT_GRAY, 430, 450, 140, 50)
+        
+        pygame.display.flip()
+
 
 def draw_text(surface, text, pos, font, color=white):
     lines = text.split('\n')
