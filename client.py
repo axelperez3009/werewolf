@@ -3,38 +3,43 @@ import socket
 import threading
 import sys
 
+# Función para conectar al servidor
+def connect_to_server():
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((HOST, PORT))
+    return client
+
 # Configuración del cliente
 HOST = 'localhost'
 PORT = 5555
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((HOST, PORT))
-
-# Inicializar Pygame
-pygame.init()
-
 # Dimensiones de la pantalla
-screen = pygame.display.set_mode((1000, 600))
+screen_width, screen_height = 1000, 600
 
-# Cargar imagen de fondo
-background_image = pygame.image.load('assets/fondo.png')
+def initialize_pygame():
+    pygame.init()
+    global screen, background_image, font, small_font, button_font, white, black, grey, blue
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    background_image = pygame.image.load('assets/fondo.png')
+    font = pygame.font.Font(None, 74)
+    small_font = pygame.font.Font(None, 36)
+    button_font = pygame.font.Font(None, 48)
+    white = (255, 255, 255)
+    black = (0, 0, 0)
+    grey = (200, 200, 200)
+    blue = (0, 0, 255)
 
-# Fuentes y colores
-font = pygame.font.Font(None, 74)
-small_font = pygame.font.Font(None, 36)
-white = (255, 255, 255)
-black = (0, 0, 0)
-grey = (200, 200, 200)
-blue = (0, 0, 255)
+initialize_pygame()
 
 messages = []
 username = ""
 role = ""
 votes = {}
 time_left = 60  # Tiempo inicial en segundos
+expelled = False  # Estado para el usuario expulsado
 
-def receive_messages():
-    global role, votes, time_left
+def receive_messages(client):
+    global role, votes, time_left, expelled
     while True:
         try:
             message = client.recv(1024).decode('utf-8')
@@ -54,6 +59,9 @@ def receive_messages():
                 messages.append("Inicio de la votación.\n")
             elif message == "FIN_VOTACION":
                 messages.append("Fin de la votación.\n")
+            elif message == "EXPULSADO":
+                expelled = True
+                break  # Detener la recepción de mensajes
             else:
                 messages.append(message + '\n')
         except Exception as e:
@@ -70,7 +78,15 @@ def draw_text(surface, text, pos, font, color=white):
             surface.blit(txt_surface, (pos[0], pos[1] + y_offset))
             y_offset += txt_surface.get_height()
 
-def login_register_screen():
+def draw_button(text, font, color, button_color, x, y, width, height):
+    button_rect = pygame.Rect(x, y, width, height)
+    pygame.draw.rect(screen, button_color, button_rect)
+    text_surf = font.render(text, True, color)
+    text_rect = text_surf.get_rect(center=(x + width / 2, y + height / 2))
+    screen.blit(text_surf, text_rect)
+    return button_rect
+
+def login_register_screen(client):
     global username
     running = True
     clock = pygame.time.Clock()
@@ -175,18 +191,45 @@ def login_register_screen():
         pygame.display.flip()
         clock.tick(30)
 
-def main():
-    global username
-    login_register_screen()
+def expelled_screen():
+    running = True
+    clock = pygame.time.Clock()
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_button.collidepoint(event.pos):
+                    running = False  # Regresar al main
+                elif exit_button.collidepoint(event.pos):
+                    pygame.quit()
+                    sys.exit()
 
-    thread = threading.Thread(target=receive_messages)
+        screen.fill(black)
+        expulsion_message = "Has sido expulsado del juego."
+        txt_surface = font.render(expulsion_message, True, white)
+        screen.blit(txt_surface, (screen.get_width() / 2 - txt_surface.get_width() / 2, screen.get_height() / 2 - 50))
+
+        back_button = draw_button("Regresar", button_font, black, grey, 400, 350, 200, 50)
+        exit_button = draw_button("Salir", button_font, black, grey, 400, 420, 200, 50)
+
+        pygame.display.flip()
+        clock.tick(30)
+
+def main():
+    global username, expelled
+    client = connect_to_server()
+    login_register_screen(client)
+
+    thread = threading.Thread(target=receive_messages, args=(client,))
     thread.start()
 
     # Main game loop
     running = True
     clock = pygame.time.Clock()
-    input_box = pygame.Rect(300, 500, 200, 50)  # Moved to the bottom
-    vote_box = pygame.Rect(700, 500, 200, 50)  # Moved to the bottom
+    input_box = pygame.Rect(300, 500, 200, 50)
+    vote_box = pygame.Rect(700, 500, 200, 50)
     active = False
     vote_active = False
     color_inactive = pygame.Color('lightskyblue3')
@@ -236,6 +279,11 @@ def main():
                     else:
                         vote_text += event.unicode
 
+        if expelled:
+            expelled_screen()
+            running = False  # Detener el loop principal después de mostrar la pantalla de expulsión
+            continue  # Saltar el resto del loop
+
         screen.blit(background_image, (0, 0))
 
         # Sección de mensajes
@@ -275,6 +323,10 @@ def main():
         clock.tick(30)
 
     pygame.quit()
+    # Reiniciar la conexión para un nuevo usuario
+    expelled = False
+    initialize_pygame()  # Re-inicializar Pygame
+    main()
 
 if __name__ == "__main__":
     main()
