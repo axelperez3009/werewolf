@@ -24,6 +24,8 @@ font = pygame.font.Font(None, 74)
 small_font = pygame.font.Font(None, 36)
 white = (255, 255, 255)
 black = (0, 0, 0)
+grey = (200, 200, 200)
+blue = (0, 0, 255)
 
 messages = []
 username = ""
@@ -40,7 +42,7 @@ def receive_messages():
                 client.send(username.encode('utf-8'))
             elif message.startswith('ROL'):
                 role = message.split(' ', 1)[1]
-                messages.append(f'Tu rol es\n{role}.\n')
+                messages.append(f'Tu rol es: {role}.\n')
                 print(f'Rol recibido: {role}')
             elif message.startswith('VOTOS'):
                 _, voted_username, count = message.split()
@@ -68,14 +70,123 @@ def draw_text(surface, text, pos, font, color=white):
             surface.blit(txt_surface, (pos[0], pos[1] + y_offset))
             y_offset += txt_surface.get_height()
 
-def main():
+def login_register_screen():
     global username
-    username = ""
-
     running = True
     clock = pygame.time.Clock()
-    input_box = pygame.Rect(300, 250, 200, 50)
-    vote_box = pygame.Rect(300, 350, 200, 50)
+    input_box_username = pygame.Rect(300, 250, 400, 50)
+    input_box_password = pygame.Rect(300, 350, 400, 50)
+    login_button = pygame.Rect(300, 450, 150, 50)
+    register_button = pygame.Rect(550, 450, 150, 50)
+    active_username = False
+    active_password = False
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color_username = color_inactive
+    color_password = color_inactive
+    username_text = ''
+    password_text = ''
+    mode = 'login'  # 'login' o 'register'
+    message = ''
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box_username.collidepoint(event.pos):
+                    active_username = not active_username
+                    active_password = False
+                elif input_box_password.collidepoint(event.pos):
+                    active_password = not active_password
+                    active_username = False
+                else:
+                    active_username = False
+                    active_password = False
+                color_username = color_active if active_username else color_inactive
+                color_password = color_active if active_password else color_inactive
+
+                if login_button.collidepoint(event.pos):
+                    mode = 'login'
+                    client.send(f'LOGIN {username_text} {password_text}'.encode('utf-8'))
+                    response = client.recv(1024).decode('utf-8')
+                    if response == 'LOGIN_SUCCESS':
+                        username = username_text
+                        running = False
+                    else:
+                        message = 'Login failed'
+                elif register_button.collidepoint(event.pos):
+                    mode = 'register'
+                    client.send(f'REGISTER {username_text} {password_text}'.encode('utf-8'))
+                    response = client.recv(1024).decode('utf-8')
+                    if response == 'REGISTER_SUCCESS':
+                        message = 'Registration successful, please log in'
+                        mode = 'login'
+                    else:
+                        message = 'Registration failed'
+
+            if event.type == pygame.KEYDOWN:
+                if active_username:
+                    if event.key == pygame.K_RETURN:
+                        active_username = False
+                    elif event.key == pygame.K_BACKSPACE:
+                        username_text = username_text[:-1]
+                    else:
+                        username_text += event.unicode
+                elif active_password:
+                    if event.key == pygame.K_RETURN:
+                        active_password = False
+                    elif event.key == pygame.K_BACKSPACE:
+                        password_text = password_text[:-1]
+                    else:
+                        password_text += event.unicode
+
+        screen.fill(black)
+        screen.blit(background_image, (0, 0))
+
+        # Username input box
+        txt_surface = font.render("Username:", True, white)
+        screen.blit(txt_surface, (300, 200))
+        txt_surface = font.render(username_text, True, color_username)
+        screen.blit(txt_surface, (input_box_username.x + 5, input_box_username.y + 5))
+        pygame.draw.rect(screen, color_username, input_box_username, 2)
+
+        # Password input box
+        txt_surface = font.render("Password:", True, white)
+        screen.blit(txt_surface, (300, 300))
+        txt_surface = font.render('*' * len(password_text), True, color_password)
+        screen.blit(txt_surface, (input_box_password.x + 5, input_box_password.y + 5))
+        pygame.draw.rect(screen, color_password, input_box_password, 2)
+
+        # Buttons
+        pygame.draw.rect(screen, grey, login_button)
+        login_text = font.render("Login", True, black)
+        screen.blit(login_text, (login_button.x + 20, login_button.y + 10))
+
+        pygame.draw.rect(screen, grey, register_button)
+        register_text = font.render("Register", True, black)
+        screen.blit(register_text, (register_button.x + 20, register_button.y + 10))
+
+        # Message display
+        message_surface = small_font.render(message, True, white)
+        screen.blit(message_surface, (300, 520))
+
+        pygame.display.flip()
+        clock.tick(30)
+
+def main():
+    global username
+    login_register_screen()
+
+    thread = threading.Thread(target=receive_messages)
+    thread.start()
+
+    # Main game loop
+    running = True
+    clock = pygame.time.Clock()
+    input_box = pygame.Rect(300, 500, 200, 50)  # Moved to the bottom
+    vote_box = pygame.Rect(700, 500, 200, 50)  # Moved to the bottom
     active = False
     vote_active = False
     color_inactive = pygame.Color('lightskyblue3')
@@ -86,68 +197,6 @@ def main():
     vote_text = ''
     done = False
 
-    while not done:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                client.close()
-                sys.exit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if input_box.collidepoint(event.pos):
-                    active = not active
-                    vote_active = False
-                elif vote_box.collidepoint(event.pos):
-                    vote_active = not vote_active
-                    active = False
-                else:
-                    active = False
-                    vote_active = False
-                color = color_active if active else color_inactive
-                vote_color = color_active if vote_active else color_inactive
-            if event.type == pygame.KEYDOWN:
-                if active:
-                    if event.key == pygame.K_RETURN:
-                        username = text
-                        text = ''
-                        done = True
-                    elif event.key == pygame.K_BACKSPACE:
-                        text = text[:-1]
-                    else:
-                        text += event.unicode
-                if vote_active:
-                    if event.key == pygame.K_RETURN:
-                        client.send(f'VOTE {vote_text}'.encode('utf-8'))
-                        vote_text = ''
-                    elif event.key == pygame.K_BACKSPACE:
-                        vote_text = vote_text[:-1]
-                    else:
-                        vote_text += event.unicode
-
-        screen.blit(background_image, (0, 0))
-        txt_surface = font.render("Introduce tu usuario:", True, white)
-        screen.blit(txt_surface, (300, 150))
-        txt_surface = font.render(text, True, color)
-        width = max(200, txt_surface.get_width() + 10)
-        input_box.w = width
-        screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
-        pygame.draw.rect(screen, color, input_box, 2)
-
-        # Mostrar el cuadro de votación
-        vote_surface = font.render(vote_text, True, vote_color)
-        vote_width = max(200, vote_surface.get_width() + 10)
-        vote_box.w = vote_width
-        screen.blit(vote_surface, (vote_box.x + 5, vote_box.y + 5))
-        pygame.draw.rect(screen, vote_color, vote_box, 2)
-        vote_label = font.render("Votar por:", True, white)
-        screen.blit(vote_label, (300, 300))
-
-        pygame.display.flip()
-        clock.tick(30)
-
-    thread = threading.Thread(target=receive_messages)
-    thread.start()
-
-    # Main game loop
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -188,28 +237,39 @@ def main():
                         vote_text += event.unicode
 
         screen.blit(background_image, (0, 0))
-        y = 50
+
+        # Sección de mensajes
+        messages_box = pygame.Rect(50, 50, 500, 400)
+        pygame.draw.rect(screen, grey, messages_box)
+        pygame.draw.rect(screen, blue, messages_box, 2)
+
+        y = 60
         for message in messages[-10:]:
-            draw_text(screen, message, (50, y), small_font, white)
+            draw_text(screen, message, (60, y), small_font, black)
             y += small_font.get_height() * (message.count('\n') + 1)
 
         # Mostrar el cronómetro
         time_text = f"Tiempo restante: {time_left}s"
         time_surface = small_font.render(time_text, True, white)
-        screen.blit(time_surface, (50, 550))
+        screen.blit(time_surface, (50, 20))
 
-        # Mostrar votos
+        # Sección de votos
+        votes_box = pygame.Rect(600, 50, 350, 400)
+        pygame.draw.rect(screen, grey, votes_box)
+        pygame.draw.rect(screen, blue, votes_box, 2)
+
         votes_text = "Votos recibidos:\n" + "\n".join([f"{user}: {count}" for user, count in votes.items()])
-        draw_text(screen, votes_text, (600, 50), small_font, white)
+        draw_text(screen, votes_text, (610, 60), small_font, black)
 
         # Mostrar el cuadro de votación
+        vote_label = font.render("Votar por:", True, white)
+        screen.blit(vote_label, (700, 460))
+
         vote_surface = font.render(vote_text, True, vote_color)
         vote_width = max(200, vote_surface.get_width() + 10)
         vote_box.w = vote_width
         screen.blit(vote_surface, (vote_box.x + 5, vote_box.y + 5))
         pygame.draw.rect(screen, vote_color, vote_box, 2)
-        vote_label = font.render("Votar por:", True, white)
-        screen.blit(vote_label, (300, 300))
 
         pygame.display.flip()
         clock.tick(30)
