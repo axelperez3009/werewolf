@@ -4,7 +4,6 @@ import random
 import sys
 import time
 import sqlite3
-from queue import Queue
 
 # Configuración del servidor
 HOST = 'localhost'
@@ -20,50 +19,39 @@ usernames = []
 roles = {}
 votes = {}
 server_running = True
-voting_time = 90  # Tiempo de votación en segundos
+voting_time = 60  # Tiempo de votación en segundos
 
-# Cola de mensajes para operaciones de la base de datos
-db_queue = Queue()
-
-# Función para manejar operaciones de la base de datos en un hilo dedicado
-def db_worker():
-    conn = sqlite3.connect('game.db', check_same_thread=False)
+def init_db():
+    conn = sqlite3.connect('game.db')
     cursor = conn.cursor()
-    cursor.execute('PRAGMA journal_mode=WAL;')
-    cursor.execute('PRAGMA busy_timeout=5000;')
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL
     )''')
     conn.commit()
-
-    while True:
-        query, params, callback = db_queue.get()
-        if query == 'STOP':
-            break
-        try:
-            cursor.execute(query, params)
-            conn.commit()
-            result = cursor.fetchall()
-            callback(result)
-        except sqlite3.IntegrityError as e:
-            callback(e)
-
     conn.close()
 
-# Iniciar el hilo de la base de datos
-db_thread = threading.Thread(target=db_worker)
-db_thread.start()
+def register_user(username, password):
+    try:
+        conn = sqlite3.connect('game.db')
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
-def init_db():
-    pass  # La inicialización de la base de datos ahora está en db_worker
+def authenticate_user(username, password):
+    conn = sqlite3.connect('game.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+    user = cursor.fetchone()
+    conn.close()
+    return user is not None
 
-def register_user(username, password, callback):
-    db_queue.put(('INSERT INTO users (username, password) VALUES (?, ?)', (username, password), callback))
-
-def authenticate_user(username, password, callback):
-    db_queue.put(('SELECT * FROM users WHERE username = ? AND password = ?', (username, password), callback))
+init_db()
 
 def broadcast(message):
     for client in clients:
@@ -76,28 +64,25 @@ def handle_client(client):
             message = client.recv(1024).decode('utf-8')
             if message.startswith('REGISTER'):
                 _, username, password = message.split()
-                def register_callback(result):
-                    if isinstance(result, Exception):
-                        client.send('REGISTER_FAILED'.encode('utf-8'))
-                    else:
-                        client.send('REGISTER_SUCCESS'.encode('utf-8'))
-                register_user(username, password, register_callback)
+                if register_user(username, password):
+                    client.send('REGISTER_SUCCESS'.encode('utf-8'))
+                else:
+                    client.send('REGISTER_FAILED'.encode('utf-8'))
             elif message.startswith('LOGIN'):
                 _, username, password = message.split()
-                def login_callback(result):
-                    if result:
-                        usernames.append(username)
-                        clients.append(client)
-                        client.send('LOGIN_SUCCESS'.encode('utf-8'))
-                        role = assign_role(username)
-                        roles[username] = role
-                        client.send(f'ROL {role}'.encode('utf-8'))
-                        broadcast(f'{username} se ha unido al servidor como {role}.')
-                        thread = threading.Thread(target=handle_client_authenticated, args=(client,))
-                        thread.start()
-                    else:
-                        client.send('LOGIN_FAILED'.encode('utf-8'))
-                authenticate_user(username, password, login_callback)
+                if authenticate_user(username, password):
+                    usernames.append(username)
+                    clients.append(client)
+                    client.send('LOGIN_SUCCESS'.encode('utf-8'))
+                    role = assign_role(username)
+                    roles[username] = role
+                    client.send(f'ROL {role}'.encode('utf-8'))
+                    broadcast(f'{username} se ha unido al servidor como {role}.')
+                    thread = threading.Thread(target=handle_client_authenticated, args=(client,))
+                    thread.start()
+                    return
+                else:
+                    client.send('LOGIN_FAILED'.encode('utf-8'))
     except Exception as e:
         print(f"Ocurrió un error: {e}")
 
@@ -148,7 +133,6 @@ def monitor_console():
             server.close()
             for client in clients:
                 client.close()
-            db_queue.put(('STOP', None, None))
             sys.exit()
 
 def vote_timer():
@@ -161,7 +145,6 @@ def vote_timer():
             time_left = voting_time - int(time.time() - start_time)
             broadcast(f"TIEMPO {time_left}")
             time.sleep(1)
-        voting_time = 60
         end_voting()
 
 def end_voting():
@@ -172,8 +155,8 @@ def end_voting():
             eliminated = voted_out[0]
             index = usernames.index(eliminated)
             client = clients[index]
-            client.send('EXPULSADO'.encode('utf-8'))  # Notificar al cliente antes de cerrar la conexión
-            time.sleep(1)  # Esperar un momento para que el cliente reciba el mensaje
+            client.send('EXPULSADO'.encode('utf-8'))
+            time.sleep(1)
             clients.remove(client)
             client.close()
             broadcast(f'{eliminated} ha sido eliminado.')
