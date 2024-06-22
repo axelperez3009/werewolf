@@ -35,8 +35,8 @@ messages = []
 username = ""
 role = ""
 votes = {}
-time_left = 60  # Tiempo inicial en segundos
-expelled = False  # Estado para el usuario expulsado
+time_left = 60 
+expelled = False
 
 def receive_messages(client):
     global role, votes, time_left, expelled
@@ -61,7 +61,7 @@ def receive_messages(client):
                 messages.append("Fin de la votación.\n")
             elif message == "EXPULSADO":
                 expelled = True
-                break  # Detener la recepción de mensajes
+                break
             else:
                 messages.append(message + '\n')
         except Exception as e:
@@ -281,8 +281,8 @@ def main():
 
         if expelled:
             expelled_screen()
-            running = False  # Detener el loop principal después de mostrar la pantalla de expulsión
-            continue  # Saltar el resto del loop
+            running = False
+            continue
 
         screen.blit(background_image, (0, 0))
 
@@ -325,7 +325,7 @@ def main():
     pygame.quit()
     # Reiniciar la conexión para un nuevo usuario
     expelled = False
-    initialize_pygame()  # Re-inicializar Pygame
+    initialize_pygame()
     main()
 
 if __name__ == "__main__":
