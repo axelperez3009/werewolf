@@ -3,18 +3,18 @@ import socket
 import threading
 import sys
 
-# Función para conectar al servidor
-def connect_to_server():
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((HOST, PORT))
-    return client
-
 # Configuración del cliente
 HOST = 'localhost'
 PORT = 5555
 
 # Dimensiones de la pantalla
 screen_width, screen_height = 1000, 600
+
+# Función para conectar al servidor
+def connect_to_server():
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((HOST, PORT))
+    return client
 
 def initialize_pygame():
     pygame.init()
