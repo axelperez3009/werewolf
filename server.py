@@ -155,6 +155,8 @@ def end_voting():
             eliminated = voted_out[0]
             index = usernames.index(eliminated)
             client = clients[index]
+            client.send('EXPULSADO'.encode('utf-8'))
+            time.sleep(1)
             clients.remove(client)
             client.close()
             broadcast(f'{eliminated} ha sido eliminado.')
